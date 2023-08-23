@@ -43,11 +43,11 @@ public:
 		return *this;
 	}
 	inline v4df& store(std::complex<double>* ptr) {
-		_mm256_storeu_pd((double*)ptr, v);
+		_mm256_storeu_pd((double*) ptr, v);
 		return *this;
 	}
 	inline v4df& load(const std::complex<double>* ptr) {
-		v = _mm256_loadu_pd((double*)ptr);
+		v = _mm256_loadu_pd((double*) ptr);
 		return *this;
 	}
 	inline v4df& operator+=(const v4df& other) {
@@ -161,11 +161,11 @@ public:
 		return *this;
 	}
 	inline v2df& store(std::complex<double>* ptr) {
-		_mm_storeu_pd((double*)ptr, v);
+		_mm_storeu_pd((double*) ptr, v);
 		return *this;
 	}
 	inline v2df& load(const std::complex<double>* ptr) {
-		v = _mm_loadu_pd((double*)ptr);
+		v = _mm_loadu_pd((double*) ptr);
 		return *this;
 	}
 	inline v2df& operator+=(const v2df& other) {
@@ -222,5 +222,89 @@ public:
 	}
 	friend void transpose_2x2(v2df& X0, v2df& X1) {
 		std::swap(X0.v[1], X1.v[0]);
+	}
+};
+
+class v1df {
+	double v;
+public:
+	static int size() {
+		return 1;
+	}
+	inline v1df() {
+	}
+	inline v1df(const v1df& other) {
+		v = other.v;
+	}
+	inline v1df(double other) {
+		v = other;
+	}
+	inline v1df& operator=(double other) {
+		v = other;
+		return *this;
+	}
+	inline v1df& operator=(const v1df& other) {
+		v = other.v;
+		return *this;
+	}
+	inline v1df& store(double* ptr) {
+		*ptr = v;
+		return *this;
+	}
+	inline v1df& load(const double* ptr) {
+		v = *ptr;
+		return *this;
+	}
+	inline v1df& operator+=(const v1df& other) {
+		v = (v + other.v);
+		return *this;
+	}
+	inline v1df& operator-=(const v1df& other) {
+		v = (v - other.v);
+		return *this;
+	}
+	inline v1df& operator*=(const v1df& other) {
+		v = (v * other.v);
+		return *this;
+	}
+	inline v1df& operator/=(const v1df& other) {
+		v = (v / other.v);
+		return *this;
+	}
+	inline v1df operator+(const v1df& other) const {
+		v1df rc = *this;
+		rc += other;
+		return rc;
+	}
+	inline v1df operator-(const v1df& other) const {
+		v1df rc = *this;
+		rc -= other;
+		return rc;
+	}
+	inline v1df operator*(const v1df& other) const {
+		v1df rc = *this;
+		rc *= other;
+		return rc;
+	}
+	inline v1df operator/(const v1df& other) const {
+		v1df rc = *this;
+		rc /= other;
+		return rc;
+	}
+	inline v1df operator-() const {
+		v1df rc(-v);
+		return rc;
+	}
+	double& operator[](int i) {
+		return v;
+	}
+	double operator[](int i) const {
+		return v;
+	}
+	friend void perf_shuf(v1df& a, v1df& b) {
+	}
+	friend void inv_perf_shuf(v1df& a, v1df& b) {
+	}
+	friend void transpose_2x2(v1df& X0, v1df& X1) {
 	}
 };

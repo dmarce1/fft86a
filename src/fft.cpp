@@ -162,8 +162,12 @@ void perf_shuf(double* X, int N) {
 template<int N1>
 void fft_1d_batch(double* Z, int N, int NLO) {
 	const int N2 = N / N1;
-	static thread_local std::vector<double> wr;
-	static thread_local std::vector<double> wi;
+	static thread_local std::vector<v4df> wr4;
+	static thread_local std::vector<v4df> wi4;
+	static thread_local std::vector<v2df> wr2;
+	static thread_local std::vector<v2df> wi2;
+	static thread_local std::vector<v1df> wr1;
+	static thread_local std::vector<v1df> wi1;
 	if (N2 > 1) {
 		for (int n1 = 0; n1 < N1; n1++) {
 			fft_1d_batch<N1>(Z + 2 * n1 * NLO * N2, N2, NLO);
@@ -175,65 +179,41 @@ void fft_1d_batch(double* Z, int N, int NLO) {
 	const int& NLO1 = NLO;
 	const double* Wr = get_cos_twiddles(N1 * N2);
 	const double* Wi = get_sin_twiddles(N1 * N2);
-	wr.resize(N1);
-	wi.resize(N1);
+	wr4.resize(N1);
+	wi4.resize(N1);
+	wr2.resize(N1);
+	wi2.resize(N1);
+	wr1.resize(N1);
+	wi1.resize(N1);
 	for (int k2 = 0; k2 < N2; k2++) {
 		for (int n1 = 1; n1 < N1; n1++) {
-			wr[n1] = Wr[k2 * n1];
-			wi[n1] = Wi[k2 * n1];
+			const int k2n1 = k2 * n1;
+			wr1[n1] = Wr[k2n1];
+			wr2[n1] = Wr[k2n1];
+			wr4[n1] = Wr[k2n1];
+			wi1[n1] = Wi[k2n1];
+			wi2[n1] = Wi[k2n1];
+			wi4[n1] = Wi[k2n1];
 		}
 		for (int ilo = 0; ilo < NLO4; ilo += v4df::size()) {
 			const int iii = ilo + 2 * NLO * k2;
 			double* X = Z + iii;
 			double* Y = X + NLO;
-			for (int n1 = 1; n1 < N1; n1++) {
-				const int sn1 = s * n1;
-				v4df x, y, tmp;
-				x.load(X + sn1);
-				y.load(Y + sn1);
-				tmp = x;
-				x = v4df(wr[n1]) * tmp - v4df(wi[n1]) * y;
-				y = v4df(wi[n1]) * tmp + v4df(wr[n1]) * y;
-				x.store(X + sn1);
-				y.store(Y + sn1);
-			}
-			butterfly<v4df, N1>(X, Y, s);
+			butterfly<v4df, N1>(X, Y, s, wr4.data(), wi4.data());
 		}
 		if (NLO2 > NLO4) {
 			const int& ilo = NLO4;
 			const int iii = ilo + 2 * NLO * k2;
 			double* X = Z + iii;
 			double* Y = X + NLO;
-			for (int n1 = 1; n1 < N1; n1++) {
-				const int sn1 = s * n1;
-				v2df x, y, tmp;
-				x.load(X + sn1);
-				y.load(Y + sn1);
-				tmp = x;
-				x = v2df(wr[n1]) * tmp - v2df(wi[n1]) * y;
-				y = v2df(wi[n1]) * tmp + v2df(wr[n1]) * y;
-				x.store(X + sn1);
-				y.store(Y + sn1);
-			}
-			butterfly<v2df, N1>(X, Y, s);
+			butterfly<v2df, N1>(X, Y, s, wr2.data(), wi2.data());
 		}
 		if (NLO1 > NLO4 && NLO1 != NLO2) {
 			const int& ilo = NLO2;
 			const int iii = ilo + 2 * NLO * k2;
 			double* X = Z + iii;
 			double* Y = X + NLO;
-			for (int n1 = 1; n1 < N1; n1++) {
-				const int sn1 = s * n1;
-				double x, y, tmp;
-				x = *(X + sn1);
-				y = *(Y + sn1);
-				tmp = x;
-				x = wr[n1] * tmp - wi[n1] * y;
-				y = wi[n1] * tmp + wr[n1] * y;
-				*(X + sn1) = x;
-				*(Y + sn1) = y;
-			}
-			butterfly<N1>(X, Y, s);
+			butterfly<v1df, N1>(X, Y, s, wr1.data(), wi1.data());
 		}
 	}
 }
