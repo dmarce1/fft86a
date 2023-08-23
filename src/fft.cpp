@@ -10,54 +10,40 @@
 #include <vector>
 
 void inv_perf_shuf(double* Z, int N) {
-	static thread_local std::vector<double> tmp;
 	double* X = Z;
 	double* Y = Z + N;
-	tmp.resize(2 * N);
-	std::memcpy(tmp.data(), Z, 2 * N * sizeof(double));
 	const int end4 = round_down(N, v4df::size());
 	const int end2 = round_down(N, v2df::size());
 	const int& end = N;
 	for (int n = 0; n < end4; n += v4df::size()) {
 		v4df x, y;
-		x.load(tmp.data() + 2 * n);
-		y.load(tmp.data() + 2 * n + v4df::size());
+		x.load(X + 2 * n);
+		y.load(X + 2 * n + v4df::size());
 		inv_perf_shuf(x, y);
-		x.store(X + n);
-		y.store(Y + n);
+		x.store(X + 2 * n);
+		y.store(X + 2 * n + v4df::size());
 	}
 	if (end2 > end4) {
 		v2df x, y;
 		const int& n = end4;
-		x.load(tmp.data() + 2 * n);
-		y.load(tmp.data() + 2 * n + v2df::size());
+		x.load(X + 2 * n);
+		y.load(X + 2 * n + v2df::size());
 		inv_perf_shuf(x, y);
-		x.store(X + n);
-		y.store(Y + n);
-	}
-	if (end > end4 && end != end2) {
-		const int& n = end2;
-		X[n] = tmp[2 * n];
-		Y[n] = tmp[2 * n + 1];
+		x.store(X + 2 * n);
+		y.store(X + 2 * n + v2df::size());
 	}
 }
 
 void perf_shuf(double* X, int N) {
-	static thread_local std::vector<double> tmpx;
-	static thread_local std::vector<double> tmpy;
 	double* Z = X;
 	double* Y = X + N;
-	tmpx.resize(N);
-	tmpy.resize(N);
-	std::memcpy(tmpx.data(), X, N * sizeof(double));
-	std::memcpy(tmpy.data(), Y, N * sizeof(double));
 	const int end4 = round_down(N, v4df::size());
 	const int end2 = round_down(N, v2df::size());
 	const int& end0 = N;
 	for (int n = 0; n < end4; n += v4df::size()) {
 		v4df x, y;
-		x.load(tmpx.data() + n);
-		y.load(tmpy.data() + n);
+		x.load(X + 2 * n);
+		y.load(X + 2 * n + v4df::size());
 		perf_shuf(x, y);
 		x.store(X + 2 * n);
 		y.store(X + 2 * n + v4df::size());
@@ -65,16 +51,11 @@ void perf_shuf(double* X, int N) {
 	if (end2 > end4) {
 		v2df x, y;
 		const int& n = end4;
-		x.load(tmpx.data() + n);
-		y.load(tmpy.data() + n);
+		x.load(X + 2 * n);
+		y.load(X + 2 * n + v2df::size());
 		perf_shuf(x, y);
 		x.store(X + 2 * n);
 		y.store(X + 2 * n + v2df::size());
-	}
-	if (end0 > end4 && end0 != end2) {
-		const int& n = end2;
-		X[2 * n] = tmpx[n];
-		X[2 * n + 1] = tmpy[n];
 	}
 }
 /*
@@ -160,7 +141,7 @@ void perf_shuf(double* X, int N) {
  }*/
 
 template<int N1>
-void fft_1d_batch(double* Z, int N, int NLO) {
+void fft_1d_batch(double* Z, int N, int NLO, shuffle_type S, int level) {
 	const int N2 = N / N1;
 	static thread_local std::vector<v4df> wr4;
 	static thread_local std::vector<v4df> wi4;
@@ -170,7 +151,7 @@ void fft_1d_batch(double* Z, int N, int NLO) {
 	static thread_local std::vector<v1df> wi1;
 	if (N2 > 1) {
 		for (int n1 = 0; n1 < N1; n1++) {
-			fft_1d_batch<N1>(Z + 2 * n1 * NLO * N2, N2, NLO);
+			fft_1d_batch<N1>(Z + 2 * n1 * NLO * N2, N2, NLO, S, level + 1);
 		}
 	}
 	const int s = 2 * NLO * N2;
@@ -185,6 +166,13 @@ void fft_1d_batch(double* Z, int N, int NLO) {
 	wi2.resize(N1);
 	wr1.resize(N1);
 	wi1.resize(N1);
+	shuffle_type this_S = S;
+	if (S == SHUF && level != 0) {
+		this_S = NO_SHUF;
+	}
+	if (S == INV_SHUF && N2 != 1) {
+		this_S = NO_SHUF;
+	}
 	for (int k2 = 0; k2 < N2; k2++) {
 		for (int n1 = 1; n1 < N1; n1++) {
 			const int k2n1 = k2 * n1;
@@ -196,24 +184,24 @@ void fft_1d_batch(double* Z, int N, int NLO) {
 			wi4[n1] = Wi[k2n1];
 		}
 		for (int ilo = 0; ilo < NLO4; ilo += v4df::size()) {
-			const int iii = ilo + 2 * NLO * k2;
+			const int iii = 2 * (ilo + NLO * k2);
 			double* X = Z + iii;
-			double* Y = X + NLO;
-			butterfly<v4df, N1>(X, Y, s, wr4.data(), wi4.data());
+			double* Y = X + v4df::size();
+			butterfly<v4df, N1>(X, Y, s, wr4.data(), wi4.data(), this_S);
 		}
 		if (NLO2 > NLO4) {
 			const int& ilo = NLO4;
-			const int iii = ilo + 2 * NLO * k2;
+			const int iii = 2 * (ilo + NLO * k2);
 			double* X = Z + iii;
-			double* Y = X + NLO;
-			butterfly<v2df, N1>(X, Y, s, wr2.data(), wi2.data());
+			double* Y = X + v2df::size();
+			butterfly<v2df, N1>(X, Y, s, wr2.data(), wi2.data(), this_S);
 		}
 		if (NLO1 > NLO4 && NLO1 != NLO2) {
 			const int& ilo = NLO2;
-			const int iii = ilo + 2 * NLO * k2;
+			const int iii = 2 * (ilo + NLO * k2);
 			double* X = Z + iii;
-			double* Y = X + NLO;
-			butterfly<v1df, N1>(X, Y, s, wr1.data(), wi1.data());
+			double* Y = X + v1df::size();
+			butterfly<v1df, N1>(X, Y, s, wr1.data(), wi1.data(), this_S);
 		}
 	}
 }
@@ -249,15 +237,15 @@ double fft_1d_3(std::complex<double>* Z, int N) {
 	const auto& Wi = get_6step_sin_twiddles(N2, N1);
 	timer tm0, tm1, tm2, tm3, tm4;
 	scramble_hi(Z, facts2, N2, N1);
-	inv_perf_shuf(Z, N2, N1);
-	fft_1d_batch<3>((double*) Z, N2, N1);
+	//inv_perf_shuf(Z, N2, N1);
+	fft_1d_batch<3>((double*) Z, N2, N1, INV_SHUF, 0);
 
 	const int end4 = round_down(N1, v4df::size());
 	const int end2 = round_down(N1, v2df::size());
 	for (int k2 = 0; k2 < N2; k2++) {
 		for (int n1 = 0; n1 < end4; n1 += v4df::size()) {
-			double* X = (double*) Z + n1 + 2 * N1 * k2;
-			double* Y = (double*) X + N1;
+			double* X = (double*) Z + 2 * (n1 + N1 * k2);
+			double* Y = (double*) X + v4df::size();
 			v4df x, y, tmp, wr, wi;
 			wr.load(Wr[k2].data() + n1);
 			wi.load(Wi[k2].data() + n1);
@@ -271,8 +259,8 @@ double fft_1d_3(std::complex<double>* Z, int N) {
 		}
 		if (end2 > end4) {
 			const int& n1 = end4;
-			double* X = (double*) Z + n1 + 2 * N1 * k2;
-			double* Y = (double*) X + N1;
+			double* X = (double*) Z + 2 * (n1 + N1 * k2);
+			double* Y = (double*) X + v2df::size();
 			v2df x, y, tmp, wr, wi;
 			wr.load(Wr[k2].data() + n1);
 			wi.load(Wi[k2].data() + n1);
@@ -286,8 +274,8 @@ double fft_1d_3(std::complex<double>* Z, int N) {
 		}
 		if (N1 > end4 && N1 != end2) {
 			const int& n1 = end2;
-			double* X = (double*) Z + n1 + 2 * N1 * k2;
-			double* Y = (double*) X + N1;
+			double* X = (double*) Z + 2 * (n1 + N1 * k2);
+			double* Y = (double*) X + v1df::size();
 			double x, y, tmp, wr, wi;
 			wr = *(Wr[k2].data() + n1);
 			wi = *(Wi[k2].data() + n1);
@@ -305,8 +293,8 @@ double fft_1d_3(std::complex<double>* Z, int N) {
 	transpose(Z, N2, N / (N2 * N2));
 	scramble_hi(Z, facts2, N2, N1);
 	inv_perf_shuf(Z, N1, N2);
-	fft_1d_batch<3>((double*) Z, N1, N2);
-	perf_shuf(Z, N1, N2);
+	fft_1d_batch<3>((double*) Z, N1, N2, SHUF, 0);
+//	perf_shuf(Z, N1, N2);
 	tm.stop();
 	return tm.read();
 }
