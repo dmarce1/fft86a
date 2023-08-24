@@ -246,18 +246,9 @@ double fft_1d(std::complex<double>* Z, int N) {
 			facts1.push_back(facts[l]);
 		}
 	}
-		for (int i = 0; i < facts.size(); i++) {
-	//	printf("0: %i\n", facts[i]);
-	}
-	for (int i = 0; i < facts2.size(); i++) {
-	//	printf("2: %i\n", facts2[i]);
-	}
-	for (int i = 0; i < facts1.size(); i++) {
-//		printf("1: %i\n", facts1[i]);
-	}
 	fft_1d_batch_dif_dispatch((double*) Z, N2, N1, 0, facts2);
 	apply_twiddles(Z, facts2, N1, N2);
-	//scramble(Z, N);
+	scramble(Z, N);
 	fft_1d_batch_dit_dispatch((double*) Z, N1, N2, 0, facts1);
 
 	tm.stop();

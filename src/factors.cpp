@@ -37,7 +37,8 @@ std::vector<int> factorize(int N) {
 	if (i == values.end()) {
 		std::vector<int> factors;
 		std::map<int, int> factor_map;
-		std::vector<int> F;
+		std::vector<int> ends;
+		std::vector<int> middle;
 		int M = N;
 		while (M > 1) {
 			for (int n = 2; n <= M; n++) {
@@ -52,12 +53,18 @@ std::vector<int> factorize(int N) {
 		}
 		for (auto i = factor_map.begin(); i != factor_map.end(); i++) {
 			int m;
-			for (m = 0; m < i->second; m ++) {
-				F.push_back(i->first);
+			for (m = i->second; m > 1; m -= 2) {
+				ends.push_back(i->first);
+			}
+			if (m == 1) {
+				middle.push_back(i->first);
 			}
 		}
-		std::reverse(F.begin(), F.end());
-		values[N] = std::move(F);
+		std::vector<int> f(ends.begin(), ends.end());
+		f.insert(f.end(), middle.begin(), middle.end());
+		std::reverse(ends.begin(), ends.end());
+		f.insert(f.end(), ends.begin(), ends.end());
+		values[N] = std::move(f);
 		i = values.find(N);
 	}
 	return i->second;

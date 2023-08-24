@@ -49,14 +49,14 @@ double test(int N) {
 		}
 		err /= N;
 	}
-	printf("-%i %e %e %e\n",  N, err, t0, t1);
+	printf("%20i %20e %20e %20e\n",  N, err, t0, t1);
 //	abort();
 	return t1;
 }
 
 int main() {
 	double tm = 0.0;
-	int M =3;
+	int M =15;
 	for (int N = M*M; N <= 1024 * 1024 * 1024; N*=M) {
 		tm += test(N);
 		tm *= M * std::log2(N) / std::log2(N - 1);

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <numeric>
 #include <unordered_map>
 
@@ -69,14 +70,18 @@ void scramble_hi(T* X, const std::vector<int>& hifacts, int N) {
 	const int NHI = std::reduce(hifacts.begin(), hifacts.end(), 1, std::multiplies<int>());
 	const int NLO = N / NHI;
 	const auto& cycles = get_cycles(hifacts);
+	static thread_local std::vector<T> tmp;
+	constexpr int CHUNK_SIZE = L1SIZE / 4 / sizeof(T);
+	tmp.resize(CHUNK_SIZE);
 	for (const auto& cycle : cycles) {
 		for (int ci = 0; ci < cycle.size() - 1; ci++) {
-			const int i = cycle[ci];
-			const int j = cycle[ci + 1];
-			for (int ilo = 0; ilo < NLO; ilo++) {
-				const int iii = i * NLO + ilo;
-				const int jjj = j * NLO + ilo;
-				std::swap(X[iii], X[jjj]);
+			for (int n = 0; n < NLO; n += CHUNK_SIZE) {
+				const int nchunk = std::min(CHUNK_SIZE, NLO - n);
+				const int i = NLO * cycle[ci] + n;
+				const int j = NLO * cycle[ci + 1] + n;
+				std::memcpy(tmp.data(), X + i, sizeof(T) * nchunk);
+				std::memcpy(X + i, X + j, sizeof(T) * nchunk);
+				std::memcpy(X + j, tmp.data(), sizeof(T) *nchunk);
 			}
 		}
 	}
@@ -88,50 +93,31 @@ void scramble(T* X, int N) {
 	std::vector<int> hifacts;
 	std::vector<int> midfacts;
 	std::vector<int> lofacts;
-	size_t size = sizeof(T);
 	int i = 0;
-	int j = facts.size() - 1;
-	if (facts.size() < 2) {
-		return;
-	}
-	int NLO = 1;
 	int NHI = 1;
-	while (i <= j) {
-		if (NLO < NHI) {
-			size *= facts[i];
-			if (size > L1SIZE) {
-				break;
-			}
-			lofacts.push_back(facts[i]);
-			NLO *= facts[i];
-			i++;
-		} else {
-			size *= facts[j];
-			if (size > L1SIZE) {
-				break;
-			}
-			hifacts.push_back(facts[j]);
-			NHI *= facts[j];
-			j--;
-		}
+	int& NLO = NHI;
+	int j = facts.size() - 1;
+	while (i < j && facts[i] == facts[j]) {
+		hifacts.push_back(facts[i]);
+		NHI *= facts[i];
+		i++;
+		j--;
 	}
+	lofacts = hifacts;
 	std::reverse(hifacts.begin(), hifacts.end());
 	for (; i <= j; i++) {
 		midfacts.push_back(facts[i]);
 	}
-	const int NMID = std::reduce(midfacts.begin(), midfacts.end(), 1, std::multiplies<int>());
-	//printf("%i %i %i %i\n", N, NHI, NMID, NLO);
-	assert(N == NMID * NLO * NHI);
+	const int NMID = N / (NHI * NLO);
+	assert(NMID == std::reduce(midfacts.begin(), midfacts.end(), 1, std::multiplies<double>()));
 	if (hifacts.size() > 1) {
 		scramble_hi(X, hifacts, N);
 	}
-	if (NLO != 1 || NHI != 1) {
-		transpose(X, NLO, NMID, NHI);
+	if (NLO != 1) {
+		transpose(X, NHI, NMID);
 	}
-	std::swap(NHI, NLO);
-	std::swap(hifacts, lofacts);
-	if (hifacts.size() > 1) {
-		scramble_hi(X, hifacts, N);
+	if (lofacts.size() > 1) {
+		scramble_hi(X, lofacts, N);
 	}
 	if (midfacts.size() > 1) {
 		for (int ihi = 0; ihi < NHI; ihi++) {
@@ -139,6 +125,7 @@ void scramble(T* X, int N) {
 			scramble_hi(X + iii, midfacts, NMID * NLO);
 		}
 	}
+//	printf( "%i = %i x %i x %i\n", N, NHI, NMID, NLO);
 }
 
 void scramble(double* X, int N) {
