@@ -10,8 +10,7 @@
 
 #include <complex>
 
-double fft_1d_3(std::complex<double>* Z, int N);
-double fft_1d_9(std::complex<double>* Z, int N);
+double fft_1d(std::complex<double>* Z, int N);
 
 
 

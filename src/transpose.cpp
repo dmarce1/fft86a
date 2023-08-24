@@ -3,7 +3,6 @@
 
 #include <functional>
 
-
 static void transpose(double* X, int xi, int yi, int D1, int N, int M) {
 	if (xi <= yi && xi < N && yi < N) {
 		if (M > 4 || xi + M > N || yi + M > N) {
@@ -84,8 +83,7 @@ static void transpose(double* X, int xi, int yi, int D1, int N, int M) {
 	}
 }
 
-static void transpose(std::complex<double>* X, int xi, int yi, int D1, int N,
-		int M) {
+static void transpose(std::complex<double>* X, int xi, int yi, int D1, int N, int M) {
 	if (xi <= yi && xi < N && yi < N) {
 		if (M > 2 || xi + M > N || yi + M > N) {
 			const int Mo2 = M >> 1;
@@ -140,3 +138,41 @@ void transpose(std::complex<double>* X, int N, int NMID) {
 		transpose(X + imid * N, 0, 0, NMID * N, N, M);
 	}
 }
+
+template<class T>
+void transpose(T* X, int NHI, int NMID, int NLO) {
+	const int N = NHI * NMID * NLO;
+	static thread_local std::vector<bool> visited;
+	visited.resize(N);
+	std::fill(visited.begin(), visited.end(), false);
+	int n = 0;
+	while (n < N) {
+		int current = n;
+		int next;
+		while(1) {
+			visited[current] = true;
+			const int ilo = current % NLO;
+			const int imid = (current / NLO) % NMID;
+			const int ihi = current / (NLO * NMID);
+			next = ihi + NHI * (imid + NMID * ilo);
+			if( !visited[next] ) {
+				std::swap(X[current], X[next]);
+				current = next;
+			} else {
+				break;
+			}
+		}
+		while (n < N && visited[n]) {
+			n++;
+		}
+	}
+}
+
+void transpose(double* X, int NHI, int NMID, int NLO) {
+	transpose<double>(X, NHI, NMID, NLO);
+}
+
+void transpose(std::complex<double>* X, int NHI, int NMID, int NLO) {
+	transpose<std::complex<double>>(X, NHI, NMID, NLO);
+}
+

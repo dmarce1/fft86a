@@ -14,6 +14,7 @@ set(fft_source_files
 
 set(fft_include_files
     fft86/butterfly.hpp
+    fft86/defs.hpp
     fft86/factors.hpp
     fft86/fft.hpp
     fft86/fftw.hpp

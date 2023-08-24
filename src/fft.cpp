@@ -5,6 +5,7 @@
 #include <fft86/util.hpp>
 #include <fft86/vec.hpp>
 
+#include <algorithm>
 #include <complex>
 #include <cstring>
 #include <vector>
@@ -14,14 +15,53 @@
 #define L3SIZE (16384 * 1024)
 
 template<int N1>
-void fft_1d_batch_dit(double* Z, int N, int NLO, int level) {
+void fft_1d_batch_dit(double* Z, int N, int NLO, int level, const std::vector<int>& factors);
+
+template<int N1>
+void fft_1d_batch_dif(double* Z, int N, int NLO, int level, const std::vector<int>& factors);
+
+void fft_1d_batch_dit_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
+	const int N1 = factors[factors.size() - level - 1];
+	switch (N1) {
+	case 3:
+		return fft_1d_batch_dit<3>(Z, N, NLO, level, factors);
+	case 5:
+		return fft_1d_batch_dit<5>(Z, N, NLO, level, factors);
+	case 7:
+		return fft_1d_batch_dit<7>(Z, N, NLO, level, factors);
+	case 11:
+		return fft_1d_batch_dit<11>(Z, N, NLO, level, factors);
+	case 13:
+		return fft_1d_batch_dit<13>(Z, N, NLO, level, factors);
+	}
+}
+
+void fft_1d_batch_dif_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
+	const int N1 = factors[level];
+	switch (N1) {
+	case 3:
+		return fft_1d_batch_dif<3>(Z, N, NLO, level, factors);
+	case 5:
+		return fft_1d_batch_dif<5>(Z, N, NLO, level, factors);
+	case 7:
+		return fft_1d_batch_dif<7>(Z, N, NLO, level, factors);
+	case 11:
+		return fft_1d_batch_dif<11>(Z, N, NLO, level, factors);
+	case 13:
+		return fft_1d_batch_dif<13>(Z, N, NLO, level, factors);
+	}
+
+}
+
+template<int N1>
+void fft_1d_batch_dit(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
 	const int NLO4 = round_down(NLO, v4df::size());
 	const int NLO2 = round_down(NLO, v2df::size());
 	const int& NLO1 = NLO;
 	const int N2 = N / N1;
 	if (N2 > 1) {
 		for (int n1 = 0; n1 < N1; n1++) {
-			fft_1d_batch_dit<N1>(Z + 2 * n1 * NLO * N2, N2, NLO, level + 1);
+			fft_1d_batch_dit_dispatch(Z + 2 * n1 * NLO * N2, N2, NLO, level + 1, factors);
 		}
 	}
 	const int s = 2 * NLO * N2;
@@ -71,7 +111,7 @@ void fft_1d_batch_dit(double* Z, int N, int NLO, int level) {
 }
 
 template<int N1>
-void fft_1d_batch_dif(double* Z, int N, int NLO, int level) {
+void fft_1d_batch_dif(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
 	const int NLO4 = round_down(NLO, v4df::size());
 	const int NLO2 = round_down(NLO, v2df::size());
 	const int& NLO1 = NLO;
@@ -122,7 +162,7 @@ void fft_1d_batch_dif(double* Z, int N, int NLO, int level) {
 	}
 	if (N2 > 1) {
 		for (int n1 = 0; n1 < N1; n1++) {
-			fft_1d_batch_dif<N1>(Z + 2 * n1 * NLO * N2, N2, NLO, level + 1);
+			fft_1d_batch_dif_dispatch(Z + 2 * n1 * NLO * N2, N2, NLO, level + 1, factors);
 		}
 	}
 }
@@ -187,29 +227,38 @@ void apply_twiddles(std::complex<double>* Z, const std::vector<int>& facts2, int
 	}
 }
 
-double fft_1d_3(std::complex<double>* Z, int N) {
+double fft_1d(std::complex<double>* Z, int N) {
 	timer tm;
 	tm.start();
-	const int log3N = std::lround(std::log(N) / std::log(3));
-	const int log3N1 = (log3N + 1) >> 1;
-	const int log3N2 = log3N - log3N1;
-	const int N1 = std::lround(std::pow(3, log3N1));
-	const int N2 = std::lround(std::pow(3, log3N2));
-	const std::vector<int> facts1(log3N1, 3);
-	const std::vector<int> facts2(log3N2, 3);
+	auto facts = factorize(N);
+	std::vector<int> facts1, facts2;
+	int N1 = 1;
+	int N2 = 1;
+	int sqrtN = std::lround(std::sqrt(N));
+	std::reverse(facts.begin(), facts.end());
 
-
-/*	scramble_hi(Z, facts2, N2, N1);
-	fft_1d_batch_dit<3>((double*) Z, N2, N1, 0);
-	apply_twiddles(Z, N1, N2);
-	transpose(Z, N2, N / (N2 * N2));
-	scramble_hi(Z, facts2, N2, N1);
-	fft_1d_batch_dit<3>((double*) Z, N1, N2, 0);
-*/
-	fft_1d_batch_dif<3>((double*) Z, N2, N1, 0);
+	for (int l = 0; l < facts.size(); l++) {
+		if (N2 < sqrtN && !(!facts1.size() && l == facts.size() - 1)) {
+			N2 *= facts[l];
+			facts2.push_back(facts[l]);
+		} else {
+			N1 *= facts[l];
+			facts1.push_back(facts[l]);
+		}
+	}
+		for (int i = 0; i < facts.size(); i++) {
+	//	printf("0: %i\n", facts[i]);
+	}
+	for (int i = 0; i < facts2.size(); i++) {
+	//	printf("2: %i\n", facts2[i]);
+	}
+	for (int i = 0; i < facts1.size(); i++) {
+//		printf("1: %i\n", facts1[i]);
+	}
+	fft_1d_batch_dif_dispatch((double*) Z, N2, N1, 0, facts2);
 	apply_twiddles(Z, facts2, N1, N2);
-	scramble(Z, N);
-	fft_1d_batch_dit<3>((double*) Z, N1, N2, 0);
+	//scramble(Z, N);
+	fft_1d_batch_dit_dispatch((double*) Z, N1, N2, 0, facts1);
 
 	tm.stop();
 	return tm.read();

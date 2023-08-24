@@ -10,10 +10,6 @@
 
 #include <vector>
 
-struct factorization {
-	std::vector<int> middle;
-	std::vector<int> ends;
-};
 
 class digits {
 	std::vector<int> facts;
@@ -26,6 +22,6 @@ public:
 	int to_int_reverse() const;
 };
 
-factorization factorize(int N);
+std::vector<int> factorize(int N);
 
 #endif /* FACTORS_HPP_ */

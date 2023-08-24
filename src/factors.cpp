@@ -1,6 +1,8 @@
 #include <fft86/factors.hpp>
 
+#include <algorithm>
 #include <limits>
+#include <map>
 #include <unordered_map>
 #include <cmath>
 
@@ -29,14 +31,13 @@ static bool is_prime(int n) {
 	return i->second;
 }
 
-factorization factorize(int N) {
-	static thread_local std::unordered_map<int, factorization> values;
+std::vector<int> factorize(int N) {
+	static thread_local std::unordered_map<int, std::vector<int>> values;
 	auto i = values.find(N);
 	if (i == values.end()) {
 		std::vector<int> factors;
-		std::unordered_map<int, int> factor_map;
-		std::vector<int> ends;
-		std::vector<int> middle;
+		std::map<int, int> factor_map;
+		std::vector<int> F;
 		int M = N;
 		while (M > 1) {
 			for (int n = 2; n <= M; n++) {
@@ -51,17 +52,12 @@ factorization factorize(int N) {
 		}
 		for (auto i = factor_map.begin(); i != factor_map.end(); i++) {
 			int m;
-			for (m = i->second; m > 1; m -= 2) {
-				ends.push_back(i->first);
-			}
-			if (m == 1) {
-				middle.push_back(i->first);
+			for (m = 0; m < i->second; m ++) {
+				F.push_back(i->first);
 			}
 		}
-		factorization f;
-		f.middle = std::move(middle);
-		f.ends = std::move(ends);
-		values[N] = std::move(f);
+		std::reverse(F.begin(), F.end());
+		values[N] = std::move(F);
 		i = values.find(N);
 	}
 	return i->second;

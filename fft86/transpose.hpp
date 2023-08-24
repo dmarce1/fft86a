@@ -12,5 +12,7 @@
 
 void transpose(double* X, int N, int NMID);
 void transpose(std::complex<double>* X, int N, int NMID);
+void transpose(double* X, int NHI, int NMID, int NLO);
+void transpose(std::complex<double>* X, int NHI, int NMID, int NLO);
 
 #endif /* TRANSPOSE_H_ */

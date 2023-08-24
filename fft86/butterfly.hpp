@@ -24,8 +24,8 @@ void butterfly(double* X, double* Y, int stride, int N);
 template<class T, int N1>
 void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	constexpr int M = (N1 - 1) >> 1;
-	static constexpr cos_twiddle_array<N1> C;
-	static constexpr sin_twiddle_array<N1> S;
+	constexpr cos_twiddle_array<N1> C;
+	constexpr sin_twiddle_array<N1> S;
 	std::array<T, N1> x, y, ap, am, bp, bm;
 	T tmp;
 	x[0].load(X);
@@ -89,8 +89,8 @@ void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 template<class T, int N1>
 void butterfly_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	constexpr int M = (N1 - 1) >> 1;
-	static constexpr cos_twiddle_array<N1> C;
-	static constexpr sin_twiddle_array<N1> S;
+	constexpr cos_twiddle_array<N1> C;
+	constexpr sin_twiddle_array<N1> S;
 	std::array<T, N1> x, y, ap, am, bp, bm;
 	T tmp;
 	x[0].load(X);
