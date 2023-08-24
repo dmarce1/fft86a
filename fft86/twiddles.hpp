@@ -19,7 +19,7 @@ const std::vector<std::vector<double>>& get_6step_sin_twiddles(int N1, int N2);
 
 template<int N>
 class cos_twiddle_array {
-	static constexpr int M = N * N;
+	static constexpr int M = N;
 	double W[M];
 public:
 	constexpr double operator[](int i) const {
@@ -30,12 +30,20 @@ public:
 		for (int n = 0; n < M; n++) {
 			W[n] = std::cos(2.0 * M_PI * n / N);
 		}
+		W[0] = 1.0;
+		if (N % 2 == 0) {
+			W[N / 2] = -1.0;
+		}
+		if (N % 4 == 0) {
+			W[N / 4] = 0.0;
+			W[3 * N / 4] = 0.0;
+		}
 	}
 };
 
 template<int N>
 class sin_twiddle_array {
-	static constexpr int M = N * N;
+	static constexpr int M = N;
 	double W[M];
 public:
 	constexpr double operator[](int i) const {
@@ -45,6 +53,14 @@ public:
 			W() {
 		for (int n = 0; n < M; n++) {
 			W[n] = std::sin(2.0 * M_PI * n / N);
+		}
+		W[0] = 0.0;
+		if (N % 2 == 0) {
+			W[N / 2] = 0.0;
+		}
+		if (N % 4 == 0) {
+			W[N / 4] = 1.0;
+			W[3 * N / 4] = -1.0;
 		}
 	}
 };

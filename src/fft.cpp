@@ -23,6 +23,12 @@ void fft_1d_batch_dif(double* Z, int N, int NLO, int level, const std::vector<in
 void fft_1d_batch_dit_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
 	const int N1 = factors[factors.size() - level - 1];
 	switch (N1) {
+	case 2:
+		return fft_1d_batch_dit<2>(Z, N, NLO, level, factors);
+	case 4:
+		return fft_1d_batch_dit<4>(Z, N, NLO, level, factors);
+	case 8:
+		return fft_1d_batch_dit<8>(Z, N, NLO, level, factors);
 	case 3:
 		return fft_1d_batch_dit<3>(Z, N, NLO, level, factors);
 	case 5:
@@ -39,6 +45,12 @@ void fft_1d_batch_dit_dispatch(double* Z, int N, int NLO, int level, const std::
 void fft_1d_batch_dif_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
 	const int N1 = factors[level];
 	switch (N1) {
+	case 2:
+		return fft_1d_batch_dif<2>(Z, N, NLO, level, factors);
+	case 4:
+		return fft_1d_batch_dif<4>(Z, N, NLO, level, factors);
+	case 8:
+		return fft_1d_batch_dif<8>(Z, N, NLO, level, factors);
 	case 3:
 		return fft_1d_batch_dif<3>(Z, N, NLO, level, factors);
 	case 5:
@@ -227,6 +239,19 @@ void apply_twiddles(std::complex<double>* Z, const std::vector<int>& facts2, int
 	}
 }
 
+std::vector<int> find_composite_radices(std::vector<int>&& f) {
+	std::vector<int> g;
+	for (int n = 0; n < f.size(); n++) {
+		int N2 = f[n];
+		while (n + 1 < f.size() && f[n + 1] == 2 && N2 < 4) {
+			N2 *= 2;
+			n++;
+		}
+		g.push_back(N2);
+	}
+	return std::move(g);
+}
+
 double fft_1d(std::complex<double>* Z, int N) {
 	timer tm;
 	tm.start();
@@ -246,11 +271,13 @@ double fft_1d(std::complex<double>* Z, int N) {
 			facts1.push_back(facts[l]);
 		}
 	}
+	const auto twfacts = facts2;
+	facts1 = find_composite_radices(std::move(facts1));
+	facts2 = find_composite_radices(std::move(facts2));
 	fft_1d_batch_dif_dispatch((double*) Z, N2, N1, 0, facts2);
-	apply_twiddles(Z, facts2, N1, N2);
+	apply_twiddles(Z, twfacts, N1, N2);
 	scramble(Z, N);
 	fft_1d_batch_dit_dispatch((double*) Z, N1, N2, 0, facts1);
-
 	tm.stop();
 	return tm.read();
 }

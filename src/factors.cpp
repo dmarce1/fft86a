@@ -51,6 +51,9 @@ std::vector<int> factorize(int N) {
 				}
 			}
 		}
+	//	int N2 = factor_map[2] & (~1);
+	//	factor_map[2] -= N2;
+	//	factor_map[4] = N2 >> 1;
 		for (auto i = factor_map.begin(); i != factor_map.end(); i++) {
 			int m;
 			for (m = i->second; m > 1; m -= 2) {
