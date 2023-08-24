@@ -18,9 +18,13 @@ const std::vector<std::vector<double>>& get_6step_cos_twiddles(int N1, int N2);
 const std::vector<std::vector<double>>& get_6step_sin_twiddles(int N1, int N2);
 
 template<int N>
-struct cos_twiddle_array {
+class cos_twiddle_array {
 	static constexpr int M = N * N;
 	double W[M];
+public:
+	constexpr double operator[](int i) const {
+		return W[i];
+	}
 	constexpr cos_twiddle_array() :
 			W() {
 		for (int n = 0; n < M; n++) {
@@ -30,9 +34,13 @@ struct cos_twiddle_array {
 };
 
 template<int N>
-struct sin_twiddle_array {
+class sin_twiddle_array {
 	static constexpr int M = N * N;
 	double W[M];
+public:
+	constexpr double operator[](int i) const {
+		return W[i];
+	}
 	constexpr sin_twiddle_array() :
 			W() {
 		for (int n = 0; n < M; n++) {

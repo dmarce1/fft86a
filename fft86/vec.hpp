@@ -90,27 +90,27 @@ public:
 		v4df rc = v4df(0.0) - *this;
 		return rc;
 	}
-	double& operator[](int i) {
+	inline double& operator[](int i) {
 		return v[i];
 	}
-	double operator[](int i) const {
+	inline double operator[](int i) const {
 		return v[i];
 	}
-	friend void perf_shuf(v4df& a, v4df& b) {
+	friend inline void perf_shuf(v4df& a, v4df& b) {
 		v4df c, d;
 		c.v = _mm256_permute2f128_pd(a.v, b.v, 0x20);
 		d.v = _mm256_permute2f128_pd(a.v, b.v, 0x31);
 		a.v = _mm256_permute4x64_pd(c.v, 216);
 		b.v = _mm256_permute4x64_pd(d.v, 216);
 	}
-	friend void inv_perf_shuf(v4df& a, v4df& b) {
+	friend inline void inv_perf_shuf(v4df& a, v4df& b) {
 		v4df c, d;
 		c.v = _mm256_permute4x64_pd(a.v, 216);
 		d.v = _mm256_permute4x64_pd(b.v, 216);
 		a.v = _mm256_permute2f128_pd(c.v, d.v, 0x20);
 		b.v = _mm256_permute2f128_pd(c.v, d.v, 0x31);
 	}
-	friend void transpose_4x4(v4df& X0, v4df& X1, v4df& X2, v4df& X3) {
+	friend inline void transpose_4x4(v4df& X0, v4df& X1, v4df& X2, v4df& X3) {
 		v4df Y0, Y1, Y2, Y3;
 		Y0.v = _mm256_unpacklo_pd(X0.v, X1.v);
 		Y1.v = _mm256_unpackhi_pd(X0.v, X1.v);
@@ -122,7 +122,7 @@ public:
 		X3.v = _mm256_permute2f128_pd(Y1.v, Y3.v, 0x31);
 	}
 
-	friend void transpose_2x2x2(v4df& X0, v4df& X1) {
+	friend inline void transpose_2x2x2(v4df& X0, v4df& X1) {
 		v4df Y0;
 		Y0.v = _mm256_permute2f128_pd(X0.v, X1.v, 0x20);
 		X1.v = _mm256_permute2f128_pd(X0.v, X1.v, 0x31);
@@ -208,19 +208,19 @@ public:
 		v2df rc = v2df(0.0) - *this;
 		return rc;
 	}
-	double& operator[](int i) {
+	inline double& operator[](int i) {
 		return v[i];
 	}
-	double operator[](int i) const {
+	inline double operator[](int i) const {
 		return v[i];
 	}
-	friend void perf_shuf(v2df& a, v2df& b) {
+	friend inline void perf_shuf(v2df& a, v2df& b) {
 		std::swap(a.v[1], b.v[0]);
 	}
-	friend void inv_perf_shuf(v2df& a, v2df& b) {
+	friend inline void inv_perf_shuf(v2df& a, v2df& b) {
 		std::swap(a.v[1], b.v[0]);
 	}
-	friend void transpose_2x2(v2df& X0, v2df& X1) {
+	friend inline void transpose_2x2(v2df& X0, v2df& X1) {
 		std::swap(X0.v[1], X1.v[0]);
 	}
 };
@@ -295,16 +295,16 @@ public:
 		v1df rc(-v);
 		return rc;
 	}
-	double& operator[](int i) {
+	inline double& operator[](int i) {
 		return v;
 	}
-	double operator[](int i) const {
+	inline double operator[](int i) const {
 		return v;
 	}
-	friend void perf_shuf(v1df& a, v1df& b) {
+	friend inline void perf_shuf(v1df& a, v1df& b) {
 	}
-	friend void inv_perf_shuf(v1df& a, v1df& b) {
+	friend inline void inv_perf_shuf(v1df& a, v1df& b) {
 	}
-	friend void transpose_2x2(v1df& X0, v1df& X1) {
+	friend inline void transpose_2x2(v1df& X0, v1df& X1) {
 	}
 };

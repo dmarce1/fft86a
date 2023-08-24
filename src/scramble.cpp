@@ -38,13 +38,13 @@ std::vector<int> scramble_(T* X, int N) {
 			1, std::multiplies<int>());
 	const int& NHI = NLO;
 	if (factors.ends.size() > 1) {
-		scramble_hi(X, factors.ends, NHI, NLO);
+		scramble_hi(X, factors.ends, NHI, NLO * NMID);
 	}
 	if (factors.ends.size() >= 1) {
 		transpose(X, NHI, NMID);
 	}
 	if (factors.ends.size() > 1) {
-		scramble_hi(X, factors.ends, NHI, NLO);
+		scramble_hi(X, factors.ends, NHI, NLO * NMID);
 	}
 	if (factors.middle.size() > 1) {
 		scramble_mid(X, factors.middle, NHI, NMID, NLO);
