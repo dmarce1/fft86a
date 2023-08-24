@@ -9,6 +9,10 @@
 #include <cstring>
 #include <vector>
 
+#define L1SIZE (32 * 1024)
+#define L2SIZE (512 * 1024)
+#define L3SIZE (16384 * 1024)
+
 void inv_perf_shuf(double* Z, int N) {
 	double* X = Z;
 	double* Y = Z + N;
@@ -142,45 +146,30 @@ void perf_shuf(double* X, int N) {
 
 template<int N1>
 void fft_1d_batch(double* Z, int N, int NLO, shuffle_type S, int level) {
+	const int NLO4 = round_down(NLO, v4df::size());
+	const int NLO2 = round_down(NLO, v2df::size());
+	const int& NLO1 = NLO;
 	const int N2 = N / N1;
-	static thread_local std::vector<v4df> wr4;
-	static thread_local std::vector<v4df> wi4;
-	static thread_local std::vector<v2df> wr2;
-	static thread_local std::vector<v2df> wi2;
-	static thread_local std::vector<v1df> wr1;
-	static thread_local std::vector<v1df> wi1;
 	if (N2 > 1) {
 		for (int n1 = 0; n1 < N1; n1++) {
 			fft_1d_batch<N1>(Z + 2 * n1 * NLO * N2, N2, NLO, S, level + 1);
 		}
 	}
 	const int s = 2 * NLO * N2;
-	const int NLO4 = round_down(NLO, v4df::size());
-	const int NLO2 = round_down(NLO, v2df::size());
-	const int& NLO1 = NLO;
 	const double* Wr = get_cos_twiddles(N1 * N2);
 	const double* Wi = get_sin_twiddles(N1 * N2);
-	wr4.resize(N1);
-	wi4.resize(N1);
-	wr2.resize(N1);
-	wi2.resize(N1);
-	wr1.resize(N1);
-	wi1.resize(N1);
 	shuffle_type this_S = S;
 	if (S == SHUF && level != 0) {
-		this_S = NO_SHUF;
+		this_S = N2 == 1 ? INV_SHUF : NO_SHUF;
 	}
 	if (S == INV_SHUF && N2 != 1) {
 		this_S = NO_SHUF;
 	}
 	for (int k2 = 0; k2 < N2; k2++) {
+		std::array<v4df, N1> wr4, wi4;
 		for (int n1 = 1; n1 < N1; n1++) {
 			const int k2n1 = k2 * n1;
-			wr1[n1] = Wr[k2n1];
-			wr2[n1] = Wr[k2n1];
 			wr4[n1] = Wr[k2n1];
-			wi1[n1] = Wi[k2n1];
-			wi2[n1] = Wi[k2n1];
 			wi4[n1] = Wi[k2n1];
 		}
 		for (int ilo = 0; ilo < NLO4; ilo += v4df::size()) {
@@ -190,6 +179,12 @@ void fft_1d_batch(double* Z, int N, int NLO, shuffle_type S, int level) {
 			butterfly<v4df, N1>(X, Y, s, wr4.data(), wi4.data(), this_S);
 		}
 		if (NLO2 > NLO4) {
+			std::array<v2df, N1> wr2, wi2;
+			for (int n1 = 1; n1 < N1; n1++) {
+				const int k2n1 = k2 * n1;
+				wr2[n1] = Wr[k2n1];
+				wi2[n1] = Wi[k2n1];
+			}
 			const int& ilo = NLO4;
 			const int iii = 2 * (ilo + NLO * k2);
 			double* X = Z + iii;
@@ -197,6 +192,12 @@ void fft_1d_batch(double* Z, int N, int NLO, shuffle_type S, int level) {
 			butterfly<v2df, N1>(X, Y, s, wr2.data(), wi2.data(), this_S);
 		}
 		if (NLO1 > NLO4 && NLO1 != NLO2) {
+			std::array<v1df, N1> wr1, wi1;
+			for (int n1 = 1; n1 < N1; n1++) {
+				const int k2n1 = k2 * n1;
+				wr1[n1] = Wr[k2n1];
+				wi1[n1] = Wi[k2n1];
+			}
 			const int& ilo = NLO2;
 			const int iii = 2 * (ilo + NLO * k2);
 			double* X = Z + iii;
@@ -223,26 +224,34 @@ void perf_shuf(std::complex<double>* Z, int N, int M) {
 void fft_1d_batch_3(std::complex<double>* Z, int N, int M) {
 }
 
-double fft_1d_3(std::complex<double>* Z, int N) {
-	timer tm;
-	tm.start();
-	const int log3N = std::lround(std::log(N) / std::log(3));
-	const int log3N1 = (log3N + 1) >> 1;
-	const int log3N2 = log3N - log3N1;
-	const std::vector<int> facts1(log3N1, 3);
-	const std::vector<int> facts2(log3N2, 3);
-	const int N1 = std::lround(std::pow(3, log3N1));
-	const int N2 = std::lround(std::pow(3, log3N2));
+void apply_twiddles(std::complex<double>* Z, int N1, int N2) {
 	const auto& Wr = get_6step_cos_twiddles(N2, N1);
 	const auto& Wi = get_6step_sin_twiddles(N2, N1);
-	timer tm0, tm1, tm2, tm3, tm4;
-	scramble_hi(Z, facts2, N2, N1);
-	//inv_perf_shuf(Z, N2, N1);
-	fft_1d_batch<3>((double*) Z, N2, N1, INV_SHUF, 0);
-
+	const int N = N1 * N2;
 	const int end4 = round_down(N1, v4df::size());
 	const int end2 = round_down(N1, v2df::size());
-	for (int k2 = 0; k2 < N2; k2++) {
+	for (int n1 = 0; n1 < end4; n1 += v4df::size()) {
+		double* X = (double*) Z + 2 * (n1);
+		double* Y = (double*) X + v4df::size();
+		v4df x, y, tmp;
+		x.load(X);
+		y.load(Y);
+		perf_shuf(x, y);
+		x.store(X);
+		y.store(Y);
+	}
+	if (end2 > end4) {
+		const int& n1 = end4;
+		double* X = (double*) Z + 2 * (n1);
+		double* Y = (double*) X + v2df::size();
+		v2df x, y, tmp;
+		x.load(X);
+		y.load(Y);
+		perf_shuf(x, y);
+		x.store(X);
+		y.store(Y);
+	}
+	for (int k2 = 1; k2 < N2; k2++) {
 		for (int n1 = 0; n1 < end4; n1 += v4df::size()) {
 			double* X = (double*) Z + 2 * (n1 + N1 * k2);
 			double* Y = (double*) X + v4df::size();
@@ -254,6 +263,7 @@ double fft_1d_3(std::complex<double>* Z, int N) {
 			tmp = x;
 			x = tmp * wr - y * wi;
 			y = tmp * wi + y * wr;
+			perf_shuf(x, y);
 			x.store(X);
 			y.store(Y);
 		}
@@ -269,6 +279,7 @@ double fft_1d_3(std::complex<double>* Z, int N) {
 			tmp = x;
 			x = tmp * wr - y * wi;
 			y = tmp * wi + y * wr;
+			perf_shuf(x, y);
 			x.store(X);
 			y.store(Y);
 		}
@@ -287,14 +298,24 @@ double fft_1d_3(std::complex<double>* Z, int N) {
 			*X = x;
 			*Y = y;
 		}
-
 	}
-	perf_shuf(Z, N2, N1);
+}
+
+double fft_1d_3(std::complex<double>* Z, int N) {
+	timer tm;
+	tm.start();
+	const int log3N = std::lround(std::log(N) / std::log(3));
+	const int log3N1 = (log3N + 1) >> 1;
+	const int log3N2 = log3N - log3N1;
+	const int N1 = std::lround(std::pow(3, log3N1));
+	const int N2 = std::lround(std::pow(3, log3N2));
+	const std::vector<int> facts2(log3N2, 3);
+	scramble_hi(Z, facts2, N2, N1);
+	fft_1d_batch<3>((double*) Z, N2, N1, INV_SHUF, 0);
+	apply_twiddles(Z, N1, N2);
 	transpose(Z, N2, N / (N2 * N2));
 	scramble_hi(Z, facts2, N2, N1);
-	inv_perf_shuf(Z, N1, N2);
 	fft_1d_batch<3>((double*) Z, N1, N2, SHUF, 0);
-//	perf_shuf(Z, N1, N2);
 	tm.stop();
 	return tm.read();
 }

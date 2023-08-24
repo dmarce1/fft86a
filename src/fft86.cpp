@@ -18,7 +18,7 @@
 
 #define NTRIAL 32
 
-void test(int N) {
+double test(int N) {
 	double err, t0 = 0, t1 = 0;
 	for (int n = 0; n < NTRIAL + 1; n++) {
 		std::vector<std::complex<double>> Z1(N), Z2(N);
@@ -39,13 +39,17 @@ void test(int N) {
 		}
 		err /= N;
 	}
-	printf("%i %e %e %e\n", N, err, t0, t1);
+	printf("3^%i %i %e %e %e\n", lround(log(N) / log(3)), N, err, t0, t1);
 //	abort();
+	return t1;
 }
 
 int main() {
-	for (int N = 81; N <= 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3; N *= 3) {
-		test(N);
+	double tm = 0.0;
+	for (int N = 81; N <= std::pow(3,16); N *= 3) {
+		tm += test(N);
+		tm *= 3.0 * std::log2(N) / std::log2(N-1);
 	}
+	printf( "%e\n", tm);
 	return 0;
 }

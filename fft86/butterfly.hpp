@@ -25,32 +25,38 @@ enum shuffle_type {
 template<class T, int N>
 void butterfly(double* X, double* Y, int stride, T* Wr, T* Wi, shuffle_type sf) {
 	constexpr int M = (N - 1) >> 1;
-	constexpr cos_twiddle_array<N> C;
-	constexpr sin_twiddle_array<N> S;
+	static constexpr cos_twiddle_array<N> C;
+	static constexpr sin_twiddle_array<N> S;
 	std::array<T, N> x, y, ap, am, bp, bm;
 	T tmp;
 	x[0].load(X);
 	y[0].load(Y);
 	if (sf == INV_SHUF) {
 		inv_perf_shuf(x[0], y[0]);
-	}
-	for (int n = 1; n < N; n++) {
-		x[n].load(X + stride * n);
-		y[n].load(Y + stride * n);
-		if (sf == INV_SHUF) {
+		for (int n = 1; n < N; n++) {
+			x[n].load(X + stride * n);
+			y[n].load(Y + stride * n);
 			inv_perf_shuf(x[n], y[n]);
+			tmp = x[n];
+			x[n] = tmp * Wr[n] - y[n] * Wi[n];
+			y[n] = tmp * Wi[n] + y[n] * Wr[n];
 		}
-		tmp = x[n];
-		x[n] = tmp * Wr[n] - y[n] * Wi[n];
-		y[n] = tmp * Wi[n] + y[n] * Wr[n];
+	} else {
+		for (int n = 1; n < N; n++) {
+			x[n].load(X + stride * n);
+			y[n].load(Y + stride * n);
+			tmp = x[n];
+			x[n] = tmp * Wr[n] - y[n] * Wi[n];
+			y[n] = tmp * Wi[n] + y[n] * Wr[n];
+		}
 	}
 	for (int n = 1; n <= M; n++) {
 		const T tmpx = x[n];
 		const T tmpy = y[n];
 		x[n] = x[n] + x[N - n];
 		y[n] = y[n] + y[N - n];
-		x[N - n] = x[N - n] - tmpx;
-		y[N - n] = y[N - n] - tmpy;
+		x[N - n] -= tmpx;
+		y[N - n] -= tmpy;
 	}
 	ap[0] = x[0];
 	bp[0] = y[0];
@@ -79,12 +85,17 @@ void butterfly(double* X, double* Y, int stride, T* Wr, T* Wi, shuffle_type sf) 
 		x[N - k] = ap[k] + am[k];
 		y[N - k] = bp[k] - bm[k];
 	}
-	for (int n = 0; n < N; n++) {
-		if (sf == SHUF) {
+	if (sf == SHUF) {
+		for (int n = 0; n < N; n++) {
 			perf_shuf(x[n], y[n]);
+			x[n].store(X + stride * n);
+			y[n].store(Y + stride * n);
 		}
-		x[n].store(X + stride * n);
-		y[n].store(Y + stride * n);
+	} else {
+		for (int n = 0; n < N; n++) {
+			x[n].store(X + stride * n);
+			y[n].store(Y + stride * n);
+		}
 	}
 }
 

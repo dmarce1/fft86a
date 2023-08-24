@@ -11,8 +11,7 @@ double fftw(std::complex<double>* x, int N) {
 	static std::unordered_map<int, fftw_complex*> in;
 	static std::unordered_map<int, fftw_complex*> out;
 	if (plans.find(N) == plans.end()) {
-		out[N] = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
-		in[N] = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+		in[N] = out[N] = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
 		plans[N] = fftw_plan_dft_1d(N, in[N], out[N], FFTW_FORWARD, FFTW_MEASURE);
 	}
 	auto* i = in[N];

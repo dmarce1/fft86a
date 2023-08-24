@@ -1,5 +1,5 @@
 project(fft86 CXX C ASM)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -O3 --fast-math")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -g --fast-math")
 
 set(fft_source_files
     src/butterfly.cpp
