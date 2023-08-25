@@ -5,8 +5,9 @@
 #include <map>
 #include <unordered_map>
 #include <cmath>
+#include <stdio.h>
 
-static bool is_prime(int n) {
+bool is_prime(int n) {
 	static thread_local std::unordered_map<int, bool> values;
 	auto i = values.find(n);
 	if (i == values.end()) {

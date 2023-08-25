@@ -11,7 +11,7 @@
 #include <complex>
 
 double fft_1d(std::complex<double>* Z, int N);
-
+void fft_pfa(std::complex<double>* X, int N1, int N2);
 
 
 #endif /* FFT_HPP_ */

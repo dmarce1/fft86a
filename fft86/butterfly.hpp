@@ -31,6 +31,13 @@ constexpr int bit_reverse(int j, int N) {
 	return l;
 }
 
+extern "C" {
+void radix4_dit(double* X, size_t s, const double* Wr, const double* Wi, size_t sf);
+void radix4_dif(double* X, size_t s, const double* Wr, const double* Wi, size_t sf);
+void radix2_dit(double* X, size_t s, const double* Wr, const double* Wi, size_t sf);
+void radix2_dif(double* X, size_t s, const double* Wr, const double* Wi, size_t sf);
+}
+
 template<class T, int N>
 inline void radix2_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	constexpr cos_twiddle_array<N> C;
@@ -292,7 +299,13 @@ inline void singleton_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 template<class T, int N1>
 inline void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	if (N1 % 2 == 0) {
-		radix2_dit<T, N1>(X, s, Wr, Wi, sf);
+		if (N1 == 4 && T::size() == 4) {
+			radix4_dit(X, s, (double*) Wr, (double*) Wi, sf);
+		} else if (T::size() == 4) {
+			radix2_dit(X, s, (double*) Wr, (double*) Wi, sf);
+		} else {
+			radix2_dit<T, N1>(X, s, Wr, Wi, sf);
+		}
 	} else if (N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {
 		singleton_dit<T, N1>(X, s, Wr, Wi, sf);
 	}
@@ -301,7 +314,13 @@ inline void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 template<class T, int N1>
 inline void butterfly_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	if (N1 % 2 == 0) {
-		radix2_dif<T, N1>(X, s, Wr, Wi, sf);
+		if (N1 == 4 && T::size() == 4) {
+			radix4_dif(X, s, (double*) Wr, (double*) Wi, sf);
+		} else if (T::size() == 4) {
+			radix2_dif(X, s, (double*) Wr, (double*) Wi, sf);
+		} else {
+			radix2_dif<T, N1>(X, s, Wr, Wi, sf);
+		}
 	} else if (N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {
 		singleton_dif<T, N1>(X, s, Wr, Wi, sf);
 	}

@@ -23,5 +23,6 @@ public:
 };
 
 std::vector<int> factorize(int N);
+bool is_prime(int n);
 
 #endif /* FACTORS_HPP_ */

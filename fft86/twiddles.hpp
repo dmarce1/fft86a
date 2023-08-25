@@ -14,6 +14,8 @@
 const std::complex<double>* get_twiddles(int N);
 const double* get_cos_twiddles(int N);
 const double* get_sin_twiddles(int N);
+const double* get_rotated_cos_twiddles(int R, int N);
+const double* get_rotated_sin_twiddles(int R, int N);
 const std::vector<std::vector<double>>& get_6step_cos_twiddles(int N1, int N2);
 const std::vector<std::vector<double>>& get_6step_sin_twiddles(int N1, int N2);
 

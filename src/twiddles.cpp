@@ -47,6 +47,37 @@ const double* get_sin_twiddles(int N) {
 	return i->second.data();
 }
 
+
+const double* get_rotated_cos_twiddles(int R, int N) {
+	static thread_local std::unordered_map<int,std::unordered_map<int, std::vector<double>>> values;
+	auto i = values[R].find(N);
+	if (i == values[R].end()) {
+		std::vector<double> W(N);
+		const double c = -2.0 * R * M_PI / N;
+		for (int n = 0; n < N; n++) {
+			W[n] = std::cos(c * n);
+		}
+		values[R][N] = std::move(W);
+		i = values[R].find(N);
+	}
+	return i->second.data();
+}
+
+const double* get_rotated_sin_twiddles(int R, int N) {
+	static thread_local std::unordered_map<int,std::unordered_map<int, std::vector<double>>> values;
+	auto i = values[R].find(N);
+	if (i == values[R].end()) {
+		std::vector<double> W(N);
+		const double c = -2.0 * R * M_PI / N;
+		for (int n = 0; n < N; n++) {
+			W[n] = std::sin(c * n);
+		}
+		values[R][N] = std::move(W);
+		i = values[R].find(N);
+	}
+	return i->second.data();
+}
+
 const std::vector<std::vector<double>>& get_6step_cos_twiddles(int N1, int N2) {
 	static thread_local std::unordered_map<int, std::unordered_map<int, std::vector<std::vector<double>>>> values;
 	auto i = values[N1].find(N2);

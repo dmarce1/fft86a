@@ -18,5 +18,6 @@
 
 void scramble(double* X, int N);
 void scramble(std::complex<double>* X, int N);
+const std::vector<int>& get_permutation(const std::vector<int>& facts);
 
 #endif /* SCRAMBLE_HPP_ */
