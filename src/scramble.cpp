@@ -113,7 +113,7 @@ void scramble(T* X, int N) {
 	if (hifacts.size() > 1) {
 		scramble_hi(X, hifacts, N);
 	}
-	if (NLO != 1) {
+	if (NHI != 1) {
 		transpose(X, NHI, NMID);
 	}
 	if (lofacts.size() > 1) {

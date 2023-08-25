@@ -6,6 +6,7 @@
 #include <fft86/vec.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <complex>
 #include <cstring>
 #include <vector>
@@ -20,7 +21,7 @@ void fft_1d_batch_dit(double* Z, int N, int NLO, int level, const std::vector<in
 template<int N1>
 void fft_1d_batch_dif(double* Z, int N, int NLO, int level, const std::vector<int>& factors);
 
-void fft_1d_batch_dit_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
+inline void fft_1d_batch_dit_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
 	const int N1 = factors[factors.size() - level - 1];
 	switch (N1) {
 	case 2:
@@ -42,7 +43,7 @@ void fft_1d_batch_dit_dispatch(double* Z, int N, int NLO, int level, const std::
 	}
 }
 
-void fft_1d_batch_dif_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
+inline void fft_1d_batch_dif_dispatch(double* Z, int N, int NLO, int level, const std::vector<int>& factors) {
 	const int N1 = factors[level];
 	switch (N1) {
 	case 2:
@@ -131,7 +132,7 @@ void fft_1d_batch_dif(double* Z, int N, int NLO, int level, const std::vector<in
 	const int s = 2 * NLO * N2;
 	const double* Wr = get_cos_twiddles(N1 * N2);
 	const double* Wi = get_sin_twiddles(N1 * N2);
-	const int flags = (N2 == 1 ? SHUF : 0) | (level == 0 ? INV_SHUF : 0);
+	const int flags = level == 0 ? INV_SHUF : 0;
 	for (int k2 = 0; k2 < N2; k2++) {
 		std::array<v4df, N1> wr4, wi4;
 		for (int n1 = 1; n1 < N1; n1++) {
@@ -196,7 +197,6 @@ void apply_twiddles(std::complex<double>* Z, const std::vector<int>& facts2, int
 			wi.load(Wi[k20].data() + n1);
 			x.load(X);
 			y.load(Y);
-			inv_perf_shuf(x, y);
 			tmp = x;
 			x = tmp * wr - y * wi;
 			y = tmp * wi + y * wr;
@@ -213,7 +213,6 @@ void apply_twiddles(std::complex<double>* Z, const std::vector<int>& facts2, int
 			wi.load(Wi[k20].data() + n1);
 			x.load(X);
 			y.load(Y);
-			inv_perf_shuf(x, y);
 			tmp = x;
 			x = tmp * wr - y * wi;
 			y = tmp * wi + y * wr;
@@ -243,7 +242,7 @@ std::vector<int> find_composite_radices(std::vector<int>&& f) {
 	std::vector<int> g;
 	for (int n = 0; n < f.size(); n++) {
 		int N2 = f[n];
-		while (n + 1 < f.size() && f[n + 1] == 2 && N2 < 4) {
+		if (n + 1 < f.size() && f[n + 1] == 2 && N2 == 2) {
 			N2 *= 2;
 			n++;
 		}
@@ -271,6 +270,7 @@ double fft_1d(std::complex<double>* Z, int N) {
 			facts1.push_back(facts[l]);
 		}
 	}
+	assert(N1 * N2 == N);
 	const auto twfacts = facts2;
 	facts1 = find_composite_radices(std::move(facts1));
 	facts2 = find_composite_radices(std::move(facts2));

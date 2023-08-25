@@ -32,10 +32,10 @@ constexpr int bit_reverse(int j, int N) {
 }
 
 template<class T, int N>
-void radix2_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
+inline void radix2_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	constexpr cos_twiddle_array<N> C;
 	constexpr sin_twiddle_array<N> S;
-	std::array<T, N> x, y, ap, am, bp, bm;
+	std::array<T, N> x, y;
 	T tmp;
 	x[0].load(X);
 	y[0].load(X + T::size());
@@ -55,26 +55,27 @@ void radix2_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	}
 	constexpr int N1 = 2;
 	constexpr int logN = std::ilogb(N);
+	const T two = T(2);
 	for (int logN2 = 0; logN2 < logN; logN2++) {
 		const int N2 = 1 << logN2;
 		const int NHI = 1 << (logN - logN2 - 1);
-		for (int ihi = 0; ihi < NHI; ihi++) {
-			for (int k2 = 0; k2 < N2; k2++) {
+		for (int k2 = 0; k2 < N2; k2++) {
+			const T wr = C[NHI * k2];
+			const T wi = S[NHI * k2];
+			for (int ihi = 0; ihi < NHI; ihi++) {
 				const int i0 = ihi * N1 * N2 + k2;
 				const int i1 = i0 + N2;
 				T er0 = x[i0];
 				T er1 = x[i1];
 				T ei0 = y[i0];
 				T ei1 = y[i1];
-				const T wr = C[NHI * k2];
-				const T wi = S[NHI * k2];
 				const T tr1 = er1;
-				er1 = tr1 * wr + ei1 * wi;
-				ei1 = ei1 * wr - tr1 * wi;
-				x[i0] = er0 + er1;
-				x[i1] = er0 - er1;
-				y[i0] = ei0 + ei1;
-				y[i1] = ei0 - ei1;
+				er1 = er0 - tr1 * wr - ei1 * wi;
+				ei1 = ei0 - ei1 * wr + tr1 * wi;
+				x[i0] = two * er0 - er1;
+				y[i0] = two * ei0 - ei1;
+				x[i1] = er1;
+				y[i1] = ei1;
 			}
 		}
 	}
@@ -90,10 +91,10 @@ void radix2_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 #define INV_SHUF 2
 
 template<class T, int N>
-void radix2_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
+inline void radix2_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	constexpr cos_twiddle_array<N> C;
 	constexpr sin_twiddle_array<N> S;
-	std::array<T, N> x, y, ap, am, bp, bm;
+	std::array<T, N> x, y;
 	T tmp;
 	x[0].load(X);
 	y[0].load(X + T::size());
@@ -112,20 +113,20 @@ void radix2_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	for (int logN2 = logN - 1; logN2 >= 0; logN2--) {
 		const int N2 = 1 << logN2;
 		const int NHI = 1 << (logN - logN2 - 1);
-		for (int ihi = 0; ihi < NHI; ihi++) {
-			for (int k2 = 0; k2 < N2; k2++) {
+		for (int k2 = 0; k2 < N2; k2++) {
+			const T wr = C[NHI * k2];
+			const T wi = S[NHI * k2];
+			for (int ihi = 0; ihi < NHI; ihi++) {
 				const int i0 = ihi * N1 * N2 + k2;
 				const int i1 = i0 + N2;
 				T er0 = x[i0];
 				T er1 = x[i1];
 				T ei0 = y[i0];
 				T ei1 = y[i1];
-				const T wr = C[NHI * k2];
-				const T wi = S[NHI * k2];
 				const T tr0 = er0;
 				const T ti0 = ei0;
-				er0 = tr0 + er1;
-				ei0 = ti0 + ei1;
+				er0 += er1;
+				ei0 += ei1;
 				er1 = tr0 - er1;
 				ei1 = ti0 - ei1;
 				x[i0] = er0;
@@ -154,7 +155,7 @@ void radix2_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 }
 
 template<class T, int N1>
-void singleton_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
+inline void singleton_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	constexpr int M = (N1 - 1) >> 1;
 	constexpr cos_twiddle_array<N1> C;
 	constexpr sin_twiddle_array<N1> S;
@@ -219,7 +220,7 @@ void singleton_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 }
 
 template<class T, int N1>
-void singleton_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
+inline void singleton_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	constexpr int M = (N1 - 1) >> 1;
 	constexpr cos_twiddle_array<N1> C;
 	constexpr sin_twiddle_array<N1> S;
@@ -289,7 +290,7 @@ void singleton_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 }
 
 template<class T, int N1>
-void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
+inline void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	if (N1 % 2 == 0) {
 		radix2_dit<T, N1>(X, s, Wr, Wi, sf);
 	} else if (N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {
@@ -298,7 +299,7 @@ void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 }
 
 template<class T, int N1>
-void butterfly_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
+inline void butterfly_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 	if (N1 % 2 == 0) {
 		radix2_dif<T, N1>(X, s, Wr, Wi, sf);
 	} else if (N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {

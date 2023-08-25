@@ -56,9 +56,14 @@ double test(int N) {
 int main() {
 	double tm = 0.0;
 	int M = 2;
+	int L = 3;
+	int O = 5;
 	for (int N = M * M; N <= 1024 * 1024 * 1024; N *= M) {
 		tm += test(N);
-		tm *= M * std::log2(N) / std::log2(N - 1);
+		N *= L;
+		tm += test(N);
+		N *= O;
+		tm += test(N);
 	}
 	printf("%e\n", tm);
 	return 0;
