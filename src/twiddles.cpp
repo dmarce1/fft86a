@@ -17,6 +17,7 @@ const std::complex<double>* get_twiddles(int N) {
 	return i->second.data();
 }
 
+
 const double* get_cos_twiddles(int N) {
 	static thread_local std::unordered_map<int, std::vector<double>> values;
 	auto i = values.find(N);

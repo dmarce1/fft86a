@@ -128,6 +128,21 @@ public:
 		X1.v = _mm256_permute2f128_pd(X0.v, X1.v, 0x31);
 		X0 = Y0;
 	}
+	friend inline v4df complex_multiply(v4df a, v4df b) {
+		v4df c;
+		const auto res = _mm256_fmaddsub_pd(_mm256_shuffle_pd(a.v, a.v, 0), b.v,
+				_mm256_mul_pd(_mm256_shuffle_pd(a.v, a.v, 15), _mm256_shuffle_pd(b.v, b.v, 5)));
+		c.v = res;
+		return c;
+	}
+	friend inline v4df rotate90(v4df a) {
+		v4df b;
+		v4df neg_odd;
+		neg_odd.v = __m256d { 1.0, -1.0, 1.0, -1.0 };
+		b.v = _mm256_permute4x64_pd(a.v, 177);
+		b *= neg_odd;
+		return b;
+	}
 };
 
 class v2df {
