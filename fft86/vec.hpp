@@ -15,7 +15,7 @@
 class v4df {
 	__m256d v;
 public:
-	static int size() {
+	static constexpr int size() {
 		return 4;
 	}
 	inline v4df() {
@@ -133,7 +133,7 @@ public:
 class v2df {
 	__m128d v;
 public:
-	static int size() {
+	static constexpr int size() {
 		return 2;
 	}
 	inline v2df() {
@@ -228,7 +228,7 @@ public:
 class v1df {
 	double v;
 public:
-	static int size() {
+	static constexpr int size() {
 		return 1;
 	}
 	inline v1df() {

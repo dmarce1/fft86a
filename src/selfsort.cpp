@@ -1,4 +1,5 @@
 #include <fft86/fft.hpp>
+#include <fft86/factors.hpp>
 #include <fft86/twiddles.hpp>
 #include <fft86/vec.hpp>
 
@@ -23,7 +24,7 @@ void fft_small(std::complex<double>* X, int s) {
 		Y[k] = X[0];
 		for (int n = 1; n < N; n++) {
 			const int nk = (n * k) % N;
-			const auto W = std::complex(C[nk], S[nk]);
+			const auto W = std::complex(C[nk], -S[nk]);
 			Y[k] += X[s * n] * W;
 		}
 	}
@@ -90,4 +91,8 @@ void fft_selfsort(const std::vector<int>& factors, std::complex<double>* X, int 
 		}
 		fft_small<N1>(X + k2, N2);
 	}
+}
+
+void fft_selfsort( std::complex<double>* X, int N) {
+	fft_selfsort_dispatch(factorize(N), X, N, 1, 0);
 }

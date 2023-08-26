@@ -25,11 +25,12 @@ double test(int N) {
 	for (int n = 0; n < NTRIAL + 1; n++) {
 		std::vector<std::complex<double>> Z1(N), Z2(N);
 		for (int n = 0; n < N; n++) {
-			Z1[n] = Z2[n] = std::complex<double>(rand1(), rand1());
+			Z1[n] = Z2[n] = std::complex<double>(0,0);
 		}
-		Z1[2] = Z2[2] = 1.0;
+		Z1[1] = Z2[1] = 1.0;
 		t0 += fftw(Z2.data(), N);
-		t1 += fft_1d(Z1.data(), N);
+//		t1 += fft_1d(Z1.data(), N);
+		fft_selfsort(Z1.data(), N);
 		if (n == 0) {
 			t1 = t0 = 0.0;
 		}
@@ -42,14 +43,14 @@ double test(int N) {
 			//++I;
 			//Z2[n].imag(I.to_int_reverse());
 			err += std::abs(Z1[n] - Z2[n]);
-			//	printf("%3i | %15e %15e  | %15e %15e  | %15e %15e |\n", n, Z1[n].real(), Z1[n].imag(), Z2[n].real(),
-			//			Z2[n].imag(), Z2[n].real() - Z1[n].real(), Z2[n].imag() - Z1[n].imag());
+				printf("%3i | %15e %15e  | %15e %15e  | %15e %15e |\n", n, Z1[n].real(), Z1[n].imag(), Z2[n].real(),
+						Z2[n].imag(), Z2[n].real() - Z1[n].real(), Z2[n].imag() - Z1[n].imag());
 			++I;
 		}
 		err /= N;
-		//	abort();
+	abort();
 	}
-	printf("%20i %20e %20e %20e %20f\n", N, err, t0, t1, t0/t1);
+	printf("%20i %20e %20e %20e %20f\n", N, err, t0, t1, t0 / t1);
 	return t1;
 }
 
@@ -106,10 +107,29 @@ void operator delete[](void *p) {
 	free(p);
 }
 
+bool usenum(int N) {
+	int M = N;
+	int cnt = 0;
+	while (M > 1) {
+		if (M % 5 == 0) {
+			M /= 5;
+		} else if (M % 3 == 0) {
+			M /= 3;
+		} else if (M % 2 == 0) {
+			M /= 2;
+		} else {
+			return false;
+		}
+		cnt++;
+	}
+	return cnt > 1;
+}
+
 int main() {
 	double tm = 0.0;
-	for (int N = 4; N <= 1024 * 1024 * 1024; N *= 5) {
-		tm += test(N);
+	for (int N = 5*5*2*2*3*3; N <= 1024 * 1024 * 1024; N*=2) {
+			tm += test(N);
+
 	}
 	return 0;
 }

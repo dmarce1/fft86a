@@ -12,11 +12,11 @@
 
 #include <stdlib.h>
 
-inline int round_down(int x, int y) {
+inline constexpr int round_down(int x, int y) {
 	return y * (x / y);
 }
 
-inline int round_up(int x, int y) {
+inline constexpr int round_up(int x, int y) {
 	return y * ((x - 1) / y + 1);
 }
 

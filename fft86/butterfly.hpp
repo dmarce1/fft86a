@@ -11,6 +11,7 @@
 #include <fft86/vec.hpp>
 #include <fft86/twiddles.hpp>
 #include <fft86/vec.hpp>
+#include <fft86/util.hpp>
 
 #include <array>
 
@@ -86,7 +87,6 @@ inline void radix2_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
 			}
 		}
 	}
-
 	for (int n = 0; n < N; n++) {
 		if (sf & SHUF) {
 			perf_shuf(x[n], y[n]);
@@ -298,32 +298,20 @@ inline void singleton_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
 
 template<class T, int N1>
 inline void butterfly_dit(double* X, int s, const T* Wr, const T* Wi, int sf) {
-	if (N1 % 2 == 0) {
-		if (N1 == 4 && T::size() == 4) {
-			radix4_dit(X, s, (double*) Wr, (double*) Wi, sf);
-		} else if (T::size() == 4) {
-			radix2_dit(X, s, (double*) Wr, (double*) Wi, sf);
-		} else {
-			radix2_dit<T, N1>(X, s, Wr, Wi, sf);
-		}
-	} else if (N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {
-		singleton_dit<T, N1>(X, s, Wr, Wi, sf);
-	}
+if constexpr(N1 % 2 == 0) {
+	radix2_dit<T, N1>(X, s, Wr, Wi, sf);
+} else if constexpr(N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {
+	singleton_dit<T, N1>(X, s, Wr, Wi, sf);
+}
 }
 
 template<class T, int N1>
 inline void butterfly_dif(double* X, int s, const T* Wr, const T* Wi, int sf) {
-	if (N1 % 2 == 0) {
-		if (N1 == 4 && T::size() == 4) {
-			radix4_dif(X, s, (double*) Wr, (double*) Wi, sf);
-		} else if (T::size() == 4) {
-			radix2_dif(X, s, (double*) Wr, (double*) Wi, sf);
-		} else {
-			radix2_dif<T, N1>(X, s, Wr, Wi, sf);
-		}
-	} else if (N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {
-		singleton_dif<T, N1>(X, s, Wr, Wi, sf);
-	}
+if (N1 % 2 == 0) {
+	radix2_dif<T, N1>(X, s, Wr, Wi, sf);
+} else if (N1 == 3 || N1 == 5 || N1 == 7 || N1 == 11 || N1 == 13) {
+	singleton_dif<T, N1>(X, s, Wr, Wi, sf);
+}
 }
 
 #endif /* FFT_HPP_ */
